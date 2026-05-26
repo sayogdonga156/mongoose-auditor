@@ -27,23 +27,19 @@
     "url": "git+https://github.com/sayogdonga156/mongoose-auditor.git"
   },
   "scripts": {
-    "build": "tsup src/index.ts --format cjs,esm --dts",
-    "dev": "tsup src/index.ts --watch",
-    "start:api": "ts-node example/server.ts",
+    "build": "tsup",
+    "dev": "tsup --watch",
     "test": "jest"
   },
-  "dependencies": {
-    "cors": "^2.8.6",
-    "express": "^5.2.1",
-    "mongoose": "^8.0.0"
+  "peerDependencies": {
+    "mongoose": "^6.0.0 || ^7.0.0 || ^8.0.0"
   },
   "devDependencies": {
-    "@types/cors": "^2.8.19",
-    "@types/express": "^5.0.6",
     "@types/jest": "^30.0.0",
     "@types/node": "^20.0.0",
     "jest": "^30.4.2",
     "mongodb-memory-server": "^11.1.0",
+    "mongoose": "^8.0.0",
     "ts-jest": "^29.4.11",
     "ts-node": "^10.9.2",
     "tsup": "^8.0.0",
