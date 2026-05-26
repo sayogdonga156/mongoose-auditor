@@ -16,8 +16,12 @@
     "auditor",
     "compliance",
     "diff",
-    "tracker"
+    "tracker",
+    "plugin",
+    "typescript"
   ],
+  "author": "Sayog Donga",
+  "license": "MIT",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/sayogdonga156/mongoose-auditor.git"
