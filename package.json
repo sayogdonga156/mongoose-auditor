@@ -1,0 +1,48 @@
+{
+  "name": "mongoose-auditor",
+  "version": "0.1.0",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "keywords": [
+    "mongoose",
+    "audit",
+    "trail",
+    "history",
+    "revert",
+    "soft-delete",
+    "auditor",
+    "compliance",
+    "diff",
+    "tracker"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/sayogdonga156/mongoose-auditor.git"
+  },
+  "scripts": {
+    "build": "tsup src/index.ts --format cjs,esm --dts",
+    "dev": "tsup src/index.ts --watch",
+    "start:api": "ts-node example/server.ts",
+    "test": "jest"
+  },
+  "dependencies": {
+    "cors": "^2.8.6",
+    "express": "^5.2.1",
+    "mongoose": "^8.0.0"
+  },
+  "devDependencies": {
+    "@types/cors": "^2.8.19",
+    "@types/express": "^5.0.6",
+    "@types/jest": "^30.0.0",
+    "@types/node": "^20.0.0",
+    "jest": "^30.4.2",
+    "mongodb-memory-server": "^11.1.0",
+    "ts-jest": "^29.4.11",
+    "ts-node": "^10.9.2",
+    "tsup": "^8.0.0",
+    "typescript": "^5.0.0"
+  }
+}
