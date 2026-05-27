@@ -5,16 +5,23 @@ function isObject(val: any): boolean {
   if (Array.isArray(val)) return false;
   if (val instanceof Date) return false;
   if (typeof Buffer !== "undefined" && Buffer.isBuffer(val)) return false;
-  if (val.constructor?.name === "ObjectId" || val._bsontype === "ObjectId") return false;
+  if (val.constructor?.name === "ObjectId" || val._bsontype === "ObjectId")
+    return false;
   return true;
 }
 
-export function shouldTrack(path: string, ignore: string[], include?: string[]): boolean {
-  if (ignore.some(i => path === i || path.startsWith(`${i}.`))) {
+export function shouldTrack(
+  path: string,
+  ignore: string[],
+  include?: string[],
+): boolean {
+  if (ignore.some((i) => path === i || path.startsWith(`${i}.`))) {
     return false;
   }
   if (include && include.length > 0) {
-    return include.some(i => path === i || path.startsWith(`${i}.`) || i.startsWith(`${path}.`));
+    return include.some(
+      (i) => path === i || path.startsWith(`${i}.`) || i.startsWith(`${path}.`),
+    );
   }
   return true;
 }
@@ -25,7 +32,7 @@ export function diffObjects(
   ignore: string[] = [],
   obfuscate: string[] = [],
   include?: string[],
-  pathPrefix: string = ""
+  pathPrefix: string = "",
 ): Change[] {
   let changes: Change[] = [];
 
@@ -48,8 +55,15 @@ export function diffObjects(
       // Recurse into nested objects
       const nestedOld = isObject(oldValue) ? oldValue : {};
       const nestedNew = isObject(newValue) ? newValue : {};
-      
-      const nestedChanges = diffObjects(nestedOld, nestedNew, ignore, obfuscate, include, fullPath);
+
+      const nestedChanges = diffObjects(
+        nestedOld,
+        nestedNew,
+        ignore,
+        obfuscate,
+        include,
+        fullPath,
+      );
       changes = changes.concat(nestedChanges);
     } else {
       // Leaf node comparison (arrays, primitives, dates)
@@ -57,7 +71,9 @@ export function diffObjects(
       const newString = JSON.stringify(newValue);
 
       if (oldString !== newString) {
-        if (obfuscate.some(o => fullPath === o || fullPath.startsWith(`${o}.`))) {
+        if (
+          obfuscate.some((o) => fullPath === o || fullPath.startsWith(`${o}.`))
+        ) {
           changes.push({
             field: fullPath,
             from: oldValue === undefined ? undefined : "***",

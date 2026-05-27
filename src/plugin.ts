@@ -10,13 +10,24 @@ export function auditTrail<T extends Record<string, any>>(
   schema: Schema<T>,
   options: AuditTrailOptions = {},
 ) {
-  const { ignore = [], obfuscate = [], include, getActor, getMetadata, connection, retainDays, background = true } = options;
+  const {
+    ignore = [],
+    obfuscate = [],
+    include,
+    getActor,
+    getMetadata,
+    connection,
+    retainDays,
+    background = true,
+  } = options;
 
   // Set up TTL if needed
   if (retainDays) {
     const AuditLog = getAuditLogModel(connection);
     // expireAfterSeconds automatically removes documents after the specified seconds
-    AuditLog.collection.createIndex({ createdAt: 1 }, { expireAfterSeconds: retainDays * 86400 }).catch(console.error);
+    AuditLog.collection
+      .createIndex({ createdAt: 1 }, { expireAfterSeconds: retainDays * 86400 })
+      .catch(console.error);
   }
 
   /*
@@ -43,8 +54,8 @@ export function auditTrail<T extends Record<string, any>>(
         }
 
         const modifiedPaths = this.modifiedPaths();
-        const hasRelevantChanges = modifiedPaths.some(
-          (path) => shouldTrack(path, ignore, include),
+        const hasRelevantChanges = modifiedPaths.some((path) =>
+          shouldTrack(path, ignore, include),
         );
         if (!hasRelevantChanges) {
           return;
@@ -85,7 +96,15 @@ export function auditTrail<T extends Record<string, any>>(
         const current = cleanObject(this.toObject() as Record<string, unknown>);
         const operation = original ? "update" : "create";
 
-        const changes = diffObjects(original || {}, current, ignore, obfuscate, include);
+        const effectiveIgnore =
+          operation === "create" ? [...ignore, "_id"] : ignore;
+        const changes = diffObjects(
+          original || {},
+          current,
+          effectiveIgnore,
+          obfuscate,
+          include,
+        );
 
         if (!changes.length && operation === "update") {
           return;
@@ -94,7 +113,7 @@ export function auditTrail<T extends Record<string, any>>(
         const model = this.constructor as Model<T>;
         const AuditLog = getAuditLogModel(connection);
 
-        const actor = getActor ? getActor() : (this.$locals.actor || null);
+        const actor = getActor ? getActor() : this.$locals.actor || null;
 
         const metadata = getMetadata ? getMetadata() : {};
 
@@ -106,9 +125,13 @@ export function auditTrail<T extends Record<string, any>>(
           metadata,
           operation,
           changes,
-        }).then(log => {
-          auditEvents.emit("auditLogCreated", log);
-        }).catch(err => console.error("audit post-save log creation error", err));
+        })
+          .then((log) => {
+            auditEvents.emit("auditLogCreated", log);
+          })
+          .catch((err) =>
+            console.error("audit post-save log creation error", err),
+          );
 
         if (!background) {
           await logPromise;
@@ -122,65 +145,87 @@ export function auditTrail<T extends Record<string, any>>(
   /*
    * QUERY MIDDLEWARE
    */
-  schema.pre(["findOneAndUpdate", "updateOne", "updateMany"], async function (this: Query<any, any>) {
-    try {
-      if ((this.getOptions() as any).__skipAudit) return;
+  schema.pre(
+    ["findOneAndUpdate", "updateOne", "updateMany"],
+    async function (this: Query<any, any>) {
+      try {
+        if ((this.getOptions() as any).__skipAudit) return;
 
-      const model = this.model;
-      const originals = await model.find(this.getQuery()).lean();
-      (this as any)._auditOriginals = originals.map((doc: any) => cleanObject(doc));
-    } catch (error) {
-      console.error("audit pre-query error", error);
-    }
-  });
+        const model = this.model;
+        const originals = await model.find(this.getQuery()).lean();
+        (this as any)._auditOriginals = originals.map((doc: any) =>
+          cleanObject(doc),
+        );
+      } catch (error) {
+        console.error("audit pre-query error", error);
+      }
+    },
+  );
 
-  schema.post(["findOneAndUpdate", "updateOne", "updateMany"], async function (this: Query<any, any>) {
-    try {
-      if ((this.getOptions() as any).__skipAudit) return;
+  schema.post(
+    ["findOneAndUpdate", "updateOne", "updateMany"],
+    async function (this: Query<any, any>) {
+      try {
+        if ((this.getOptions() as any).__skipAudit) return;
 
-      const originals = (this as any)._auditOriginals || [];
-      if (!originals.length) return;
+        const originals = (this as any)._auditOriginals || [];
+        if (!originals.length) return;
 
-      const model = this.model;
-      const AuditLog = getAuditLogModel(connection);
-      
-      const actor = getActor ? getActor() : ((this.getOptions() as any).actor || null);
+        const model = this.model;
+        const AuditLog = getAuditLogModel(connection);
 
-      // Fetch the updated documents
-      const ids = originals.map((doc: any) => doc._id);
-      const updatedDocs = await model.find({ _id: { $in: ids } }).lean();
+        const actor = getActor
+          ? getActor()
+          : (this.getOptions() as any).actor || null;
 
-      for (const original of originals) {
-        const currentDoc = updatedDocs.find((d: any) => String(d._id) === String(original._id));
-        if (!currentDoc) continue;
+        // Fetch the updated documents
+        const ids = originals.map((doc: any) => doc._id);
+        const updatedDocs = await model.find({ _id: { $in: ids } }).lean();
 
-        const current = cleanObject(currentDoc as Record<string, unknown>);
-        const changes = diffObjects(original, current, ignore, obfuscate, include);
+        for (const original of originals) {
+          const currentDoc = updatedDocs.find(
+            (d: any) => String(d._id) === String(original._id),
+          );
+          if (!currentDoc) continue;
 
-        if (changes.length) {
-          const metadata = getMetadata ? getMetadata() : {};
+          const current = cleanObject(currentDoc as Record<string, unknown>);
+          const changes = diffObjects(
+            original,
+            current,
+            ignore,
+            obfuscate,
+            include,
+          );
 
-          const logPromise = AuditLog.create({
-            modelName: model.modelName,
-            collectionName: model.collection.name,
-            documentId: original._id,
-            actor,
-            metadata,
-            operation: "update",
-            changes,
-          }).then(log => {
-            auditEvents.emit("auditLogCreated", log);
-          }).catch(err => console.error("audit post-query log creation error", err));
+          if (changes.length) {
+            const metadata = getMetadata ? getMetadata() : {};
 
-          if (!background) {
-            await logPromise;
+            const logPromise = AuditLog.create({
+              modelName: model.modelName,
+              collectionName: model.collection.name,
+              documentId: original._id,
+              actor,
+              metadata,
+              operation: "update",
+              changes,
+            })
+              .then((log) => {
+                auditEvents.emit("auditLogCreated", log);
+              })
+              .catch((err) =>
+                console.error("audit post-query log creation error", err),
+              );
+
+            if (!background) {
+              await logPromise;
+            }
           }
         }
+      } catch (error) {
+        console.error("audit post-query error", error);
       }
-    } catch (error) {
-      console.error("audit post-query error", error);
-    }
-  });
+    },
+  );
 
   /*
    * DELETE SUPPORT
@@ -195,8 +240,10 @@ export function auditTrail<T extends Record<string, any>>(
 
       const model = doc.constructor as Model<T>;
       const AuditLog = getAuditLogModel(connection);
-      
-      const actor = getActor ? getActor() : ((this.getOptions() as any).actor || null);
+
+      const actor = getActor
+        ? getActor()
+        : (this.getOptions() as any).actor || null;
 
       const metadata = getMetadata ? getMetadata() : {};
 
@@ -208,9 +255,11 @@ export function auditTrail<T extends Record<string, any>>(
         metadata,
         operation: "delete",
         changes: [],
-      }).then(log => {
-        auditEvents.emit("auditLogCreated", log);
-      }).catch(err => console.error("audit delete log creation error", err));
+      })
+        .then((log) => {
+          auditEvents.emit("auditLogCreated", log);
+        })
+        .catch((err) => console.error("audit delete log creation error", err));
 
       if (!background) {
         await logPromise;

@@ -15,7 +15,7 @@ export function exportToCSV(logs: AuditLogDocument[]): string {
     "Field",
     "From",
     "To",
-    "Metadata"
+    "Metadata",
   ];
 
   const escapeCSV = (val: any) => {
@@ -50,7 +50,7 @@ export function exportToCSV(logs: AuditLogDocument[]): string {
         escapeCSV(change.field),
         escapeCSV(change.from),
         escapeCSV(change.to),
-        metadataStr
+        metadataStr,
       ];
       rows.push(row.join(","));
     }

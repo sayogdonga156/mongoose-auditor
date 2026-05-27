@@ -26,24 +26,24 @@ export interface AuditLogDocument extends mongoose.Document {
   operation: "create" | "update" | "delete";
   changes: Change[];
   createdAt: Date;
-  
+
   revert(ignore?: string[]): Promise<any>;
 }
 
 export interface AuditLogModel extends mongoose.Model<AuditLogDocument> {
   getByDocument(
-    documentId: string | Types.ObjectId, 
-    options?: { populateActor?: boolean; skip?: number; limit?: number }
+    documentId: string | Types.ObjectId,
+    options?: { populateActor?: boolean; skip?: number; limit?: number },
   ): mongoose.Query<AuditLogDocument[], AuditLogDocument>;
-  
+
   getByModel(
-    modelName: string, 
-    options?: { populateActor?: boolean; skip?: number; limit?: number }
+    modelName: string,
+    options?: { populateActor?: boolean; skip?: number; limit?: number },
   ): mongoose.Query<AuditLogDocument[], AuditLogDocument>;
-  
+
   getByActor(
-    actorId: string | Types.ObjectId, 
-    options?: { populateActor?: boolean; skip?: number; limit?: number }
+    actorId: string | Types.ObjectId,
+    options?: { populateActor?: boolean; skip?: number; limit?: number },
   ): mongoose.Query<AuditLogDocument[], AuditLogDocument>;
 }
 

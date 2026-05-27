@@ -59,7 +59,10 @@ AuditSchema.index({ documentId: 1, createdAt: -1 });
 AuditSchema.index({ modelName: 1, createdAt: -1 });
 AuditSchema.index({ actor: 1, createdAt: -1 });
 
-AuditSchema.statics.getByDocument = function(documentId: mongoose.Types.ObjectId, options?: { populateActor?: boolean, skip?: number, limit?: number }) {
+AuditSchema.statics.getByDocument = function (
+  documentId: mongoose.Types.ObjectId,
+  options?: { populateActor?: boolean; skip?: number; limit?: number },
+) {
   let query = this.find({ documentId }).sort({ createdAt: -1 });
   if (options?.populateActor) {
     query = query.populate("actor");
@@ -73,7 +76,10 @@ AuditSchema.statics.getByDocument = function(documentId: mongoose.Types.ObjectId
   return query;
 };
 
-AuditSchema.statics.getByModel = function(modelName: string, options?: { populateActor?: boolean, skip?: number, limit?: number }) {
+AuditSchema.statics.getByModel = function (
+  modelName: string,
+  options?: { populateActor?: boolean; skip?: number; limit?: number },
+) {
   let query = this.find({ modelName: modelName }).sort({ createdAt: -1 });
   if (options?.populateActor) {
     query = query.populate("actor");
@@ -87,7 +93,10 @@ AuditSchema.statics.getByModel = function(modelName: string, options?: { populat
   return query;
 };
 
-AuditSchema.statics.getByActor = function(actorId: mongoose.Types.ObjectId, options?: { populateActor?: boolean, skip?: number, limit?: number }) {
+AuditSchema.statics.getByActor = function (
+  actorId: mongoose.Types.ObjectId,
+  options?: { populateActor?: boolean; skip?: number; limit?: number },
+) {
   let query = this.find({ actor: actorId }).sort({ createdAt: -1 });
   if (options?.populateActor) {
     query = query.populate("actor");
@@ -101,27 +110,33 @@ AuditSchema.statics.getByActor = function(actorId: mongoose.Types.ObjectId, opti
   return query;
 };
 
-AuditSchema.methods.revert = async function(ignore: string[] = []) {
+AuditSchema.methods.revert = async function (ignore: string[] = []) {
   const modelNameString = this.modelName;
-  const targetModel = (this.constructor as mongoose.Model<any>).db.model(modelNameString);
+  const targetModel = (this.constructor as mongoose.Model<any>).db.model(
+    modelNameString,
+  );
 
   if (!targetModel) {
     throw new Error(`Model ${modelNameString} not found on this connection`);
   }
 
   if (this.operation === "create") {
-    throw new Error("Cannot revert a create operation because it would delete the document completely.");
+    throw new Error(
+      "Cannot revert a create operation because it would delete the document completely.",
+    );
   }
 
   if (this.operation === "delete") {
     const AuditLogModel = this.constructor as mongoose.Model<any>;
-    const createLog = await AuditLogModel.findOne({ 
-      documentId: this.documentId, 
-      operation: "create" 
+    const createLog = await AuditLogModel.findOne({
+      documentId: this.documentId,
+      operation: "create",
     });
 
     if (!createLog) {
-      throw new Error("Cannot revert a delete operation because the original create audit log was not found.");
+      throw new Error(
+        "Cannot revert a delete operation because the original create audit log was not found.",
+      );
     }
 
     const restorePayload: Record<string, any> = {};
@@ -151,17 +166,27 @@ AuditSchema.methods.revert = async function(ignore: string[] = []) {
   return await targetModel.findByIdAndUpdate(
     this.documentId,
     { $set: updatePayload },
-    { new: true, __skipAudit: true } as any
+    { new: true, __skipAudit: true } as any,
   );
 };
 
 export type AuditDocument = AuditLogDocument;
 
-export function getAuditLogModel(connection?: mongoose.Connection): AuditLogModel {
+export function getAuditLogModel(
+  connection?: mongoose.Connection,
+): AuditLogModel {
   if (connection) {
-    return (connection.models.AuditLog || connection.model<AuditLogDocument, AuditLogModel>("AuditLog", AuditSchema)) as AuditLogModel;
+    return (connection.models.AuditLog ||
+      connection.model<AuditLogDocument, AuditLogModel>(
+        "AuditLog",
+        AuditSchema,
+      )) as AuditLogModel;
   }
-  return (mongoose.models.AuditLog || mongoose.model<AuditLogDocument, AuditLogModel>("AuditLog", AuditSchema)) as AuditLogModel;
+  return (mongoose.models.AuditLog ||
+    mongoose.model<AuditLogDocument, AuditLogModel>(
+      "AuditLog",
+      AuditSchema,
+    )) as AuditLogModel;
 }
 
 export const AuditLog: AuditLogModel = getAuditLogModel();
