@@ -2,21 +2,21 @@
 
 A powerful, production-ready Mongoose plugin to automatically track document changes (creates, updates, deletes) with an advanced feature set including field obfuscation, automatic history reversion, TTL logs, and powerful query helpers.
 
-## ✨ Features
+## Features
 
-- 🔬 **Automatic Deep Diffing**: Only logs the exact nested fields that changed (e.g. `settings.notifications.sms: from false to true`).
-- 🪝 **Comprehensive Hook Support**: Intercepts `save`, `findOneAndUpdate`, `updateOne`, `updateMany`, and `findOneAndDelete`.
-- 👤 **Global Actor Context**: Track _who_ made the changes globally across the app.
-- 🛡️ **Data Obfuscation**: Mask sensitive data (like passwords) in the logs.
-- 🗑️ **TTL Log Cleanup**: Automatically delete old audit logs.
-- 🗄️ **Custom Database Connection**: Store logs in a completely separate database for compliance.
-- 📁 **CSV/JSON Export**: Built-in functions to export flattened CSV reports for SOC2/HIPAA compliance.
-- ⏪ **State Reversion**: Easily rollback a document to its previous state with a single method call.
-- 📄 **Pagination & Query Helpers**: Fetch formatted history easily with built-in paginated statics.
-- ⚡ **Zero-Latency Writes**: Asynchronous non-blocking architecture ensures main app speed isn't impacted.
-- 🎛️ **Opt-in & Opt-out Tracking**: Granular control via `ignore` and `include` arrays.
-- 🏷️ **Custom Metadata**: Inject IP Addresses, User Agents, or reasons directly into logs.
-- 📡 **Event Emitters**: Globally listen for `auditLogCreated` to fire off webhooks or analytics.
+- **Automatic Deep Diffing**: Only logs the exact nested fields that changed (e.g. `settings.notifications.sms: from false to true`).
+- **Comprehensive Hook Support**: Intercepts `save`, `findOneAndUpdate`, `updateOne`, `updateMany`, and `findOneAndDelete`.
+- **Global Actor Context**: Track _who_ made the changes globally across the app.
+- **Data Obfuscation**: Mask sensitive data (like passwords) in the logs.
+- **TTL Log Cleanup**: Automatically delete old audit logs.
+- **Custom Database Connection**: Store logs in a completely separate database for compliance.
+- **CSV/JSON Export**: Built-in functions to export flattened CSV reports for SOC2/HIPAA compliance.
+- **State Reversion**: Easily rollback a document to its previous state with a single method call.
+- **Pagination & Query Helpers**: Fetch formatted history easily with built-in paginated statics.
+- **Zero-Latency Writes**: Asynchronous non-blocking architecture ensures main app speed isn't impacted.
+- **Opt-in & Opt-out Tracking**: Granular control via `ignore` and `include` arrays.
+- **Custom Metadata**: Inject IP Addresses, User Agents, or reasons directly into logs.
+- **Event Emitters**: Globally listen for `auditLogCreated` to fire off webhooks or analytics.
 
 ---
 
@@ -34,7 +34,7 @@ $ yarn add mongoose-auditor
 
 ---
 
-## 🚀 Quick Setup
+## Quick Setup
 
 ```typescript
 import mongoose from "mongoose";
@@ -59,7 +59,7 @@ const UserModel = mongoose.model("User", UserSchema);
 
 ---
 
-## 🛠 Plugin Options
+## Plugin Options
 
 When initializing the plugin, you can pass an `AuditTrailOptions` object:
 
@@ -76,7 +76,7 @@ When initializing the plugin, you can pass an `AuditTrailOptions` object:
 
 ---
 
-## 🎭 Global Actor Context (AsyncLocalStorage)
+## Global Actor Context (AsyncLocalStorage)
 
 Passing the actor/user ID manually to every `save()` or `findOneAndUpdate()` is tedious. By using the `getActor` option alongside Node's built-in `AsyncLocalStorage`, your audit trails can automatically figure out _who_ triggered a database change without any extra code!
 
@@ -124,7 +124,7 @@ await UserModel.findOneAndUpdate(
 
 ---
 
-## 🔄 Reverting History
+## Reverting History
 
 You can instantly rollback a document to an older state using the `.revert()` method on an `AuditLog` instance.
 
@@ -140,7 +140,7 @@ const restoredDocument = await log.revert(["updatedAt", "lastLogin"]);
 
 ---
 
-## 📊 Common Query Functions (Table View)
+## Common Query Functions (Table View)
 
 The `AuditLog` model provides three static helper functions heavily optimized with MongoDB indexes to fetch historical data efficiently.
 
@@ -165,7 +165,7 @@ const logs = await AuditLog.getByActor("123", {
 
 ---
 
-## 📡 Event Emitters (Webhooks)
+## Event Emitters (Webhooks)
 
 You can globally listen to audit events across your entire application. This is extremely useful for streaming logs to Datadog, Slack, or triggering internal webhooks.
 
@@ -181,7 +181,7 @@ auditEvents.on("auditLogCreated", (log) => {
 
 ---
 
-## ⚡ High-Scale Performance Best Practices
+## High-Scale Performance Best Practices
 
 To ensure `mongoose-auditor` does not bottleneck your enterprise application, keep these three things in mind:
 
@@ -216,7 +216,7 @@ await UserModel.updateMany({}, { active: true }, { __skipAudit: true });
 
 ---
 
-## 📁 Data Exporting & Compliance (CSV / JSON)
+## Data Exporting & Compliance (CSV / JSON)
 
 For enterprise applications that require regular SOC2 or HIPAA compliance audits, you can easily export historical data.
 
@@ -241,35 +241,27 @@ app.get("/users/:id/export-csv", async (req, res) => {
 
 ---
 
-## 🗑️ Reverting "Delete" Operations (Soft Deletes)
+## Reverting "Delete" Operations
 
-`mongoose-auditor` does not store full document backups. If you use `findOneAndDelete()`, the original document is destroyed and the "delete" audit log cannot be reversed.
+`mongoose-auditor` fully supports reverting deleted documents. Even if you use `findOneAndDelete()`, the "delete" audit log can be reversed to recreate the original document!
 
-To support reverting deletions, use the industry-standard **Soft Delete** pattern. Because soft-deleting is technically an `update` operation, the audit trail automatically tracks it!
+When a document is deleted, the plugin logs the deletion. To revert it, the plugin will look up the original `"create"` audit log for that document, and re-insert the document with the data it originally had.
 
-### 1. Add `deletedAt` to your Schema (with an index)
+### Example
 
 ```typescript
-const UserSchema = new mongoose.Schema({
-  name: String,
-  deletedAt: { type: Date, default: null, index: true }, // Index ensures fast queries!
+// 1. A document is deleted
+await UserModel.findOneAndDelete({ _id: userId });
+
+// 2. Find the delete log
+const deleteLog = await AuditLog.findOne({
+  documentId: userId,
+  operation: "delete"
 });
+
+// 3. Revert the delete!
+await deleteLog.revert(); // The user is recreated using their original data!
 ```
 
-### 2. Update instead of Delete
+> **Note:** Reverting a delete operation requires the original `"create"` audit log to exist in the database. If your `retainDays` TTL has already deleted the create log, the reversion will fail.
 
-```typescript
-// Soft Delete the user
-await UserModel.findOneAndUpdate(
-  { _id: userId },
-  { $set: { deletedAt: new Date() } },
-);
-```
-
-### 3. Revert the Delete!
-
-```typescript
-// Because it was just an update, you can revert it like normal!
-const deleteLog = await AuditLog.findById("...");
-await deleteLog.revert(); // deletedAt is restored to null!
-```
