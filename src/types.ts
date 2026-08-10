@@ -45,6 +45,10 @@ export interface AuditLogModel extends mongoose.Model<AuditLogDocument> {
     actorId: string | Types.ObjectId,
     options?: { populateActor?: boolean; skip?: number; limit?: number },
   ): mongoose.Query<AuditLogDocument[], AuditLogDocument>;
+
+  deleteByActor(
+    actorId: string | Types.ObjectId,
+  ): mongoose.Query<any, AuditLogDocument>;
 }
 
 export interface AuditLocals {

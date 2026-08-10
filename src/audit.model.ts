@@ -110,6 +110,12 @@ AuditSchema.statics.getByActor = function (
   return query;
 };
 
+AuditSchema.statics.deleteByActor = function (
+  actorId: mongoose.Types.ObjectId,
+) {
+  return this.deleteMany({ actor: actorId });
+};
+
 AuditSchema.methods.revert = async function (ignore: string[] = []) {
   const modelNameString = this.modelName;
   const targetModel = (this.constructor as mongoose.Model<any>).db.model(

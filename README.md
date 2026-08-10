@@ -149,8 +149,9 @@ The `AuditLog` model provides three static helper functions heavily optimized wi
 | **`getByDocument`** | Fetch the entire lifecycle history for a single, specific document.        | `documentId: string \| ObjectId`<br>`options: { populateActor?: boolean; skip?: number; limit?: number }` | `Query<AuditLogDocument[], AuditLogDocument>` |
 | **`getByActor`**    | Fetch all actions made globally by a specific actor/user.                  | `actorId: string \| ObjectId`<br>`options: { populateActor?: boolean; skip?: number; limit?: number }`    | `Query<AuditLogDocument[], AuditLogDocument>` |
 | **`getByModel`**    | Fetch all changes that occurred to an entire Mongoose Model (e.g. "User"). | `modelName: string`<br>`options: { populateActor?: boolean; skip?: number; limit?: number }`              | `Query<AuditLogDocument[], AuditLogDocument>` |
+| **`deleteByActor`** | Delete all actions made globally by a specific actor/user.                 | `actorId: string \| ObjectId`                                                                             | `Query<any, AuditLogDocument>`                |
 
-### Query Example (with Pagination)
+### Query Example (with Pagination and Deletion)
 
 ```typescript
 import { AuditLog } from "mongoose-auditor";
@@ -161,6 +162,9 @@ const logs = await AuditLog.getByActor("123", {
   limit: 10,
   skip: 10,
 });
+
+// Delete all logs for user 123
+await AuditLog.deleteByActor("123");
 ```
 
 ---

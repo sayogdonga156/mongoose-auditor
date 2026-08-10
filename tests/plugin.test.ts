@@ -111,4 +111,22 @@ describe("Mongoose Audit Trail Plugin", () => {
     expect(logs.length).toBe(1);
     expect(logs[0].operation).toBe("create");
   });
+
+  it("should delete all logs for a specific actor", async () => {
+    // Create multiple documents to generate logs
+    await TestModel.create({ name: "Actor1Doc", age: 20 });
+    await TestModel.create({ name: "Actor1Doc2", age: 21 });
+    
+    // Check they exist
+    const logsBefore = await AuditLog.find();
+    expect(logsBefore.length).toBe(2);
+
+    // Act
+    const actorId = new mongoose.Types.ObjectId("5f9d88b9c3b9c8b9c8b9c8b9");
+    await AuditLog.deleteByActor(actorId);
+
+    // Assert
+    const logsAfter = await AuditLog.find();
+    expect(logsAfter.length).toBe(0);
+  });
 });
